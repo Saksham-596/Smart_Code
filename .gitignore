@@ -1,0 +1,15 @@
+# Python Artifacts
+__pycache__/
+*.py[cod]
+
+# Virtual Environments
+backend/venv/
+venv/
+env/
+
+# Node/Next.js Artifacts
+frontend/node_modules/
+frontend/.next/
+
+# OS Files
+.DS_Store
