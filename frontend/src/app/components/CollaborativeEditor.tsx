@@ -6,7 +6,13 @@ import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 import {MonacoBinding} from 'y-monaco';
 
-export default function CollaborativeEditor({roomName} : { roomName: string}) {
+export default function CollaborativeEditor({
+  roomName, 
+  onCodeChange 
+}: { 
+  roomName: string; 
+  onCodeChange?: (newCode: string) => void 
+}) {
     const editorRef = useRef<any>(null);
     function handleEditorDidMount(editor: any ,monaco : any) {
         editorRef.current = editor;
@@ -36,16 +42,21 @@ export default function CollaborativeEditor({roomName} : { roomName: string}) {
     return (
         <div className="h-full w-full">
             <Editor
-            height="100%"
-            defaultLanguage="python"
-            theme = "vs-dark"
-            onMount={handleEditorDidMount}
-            options={{
-                minimap : {enabled : false},
-                fontSize : 16,
-                wordWrap : "on"
-            }}
-            />
+        height="100%"
+        defaultLanguage="python"
+        theme="vs-dark"
+        options={{
+          minimap: { enabled: false },
+          fontSize: 14,
+        }}
+        onMount={handleEditorDidMount}
+        onChange={(value) => {
+          // Send the updated code back to page.tsx
+          if (onCodeChange && value !== undefined) {
+             onCodeChange(value);
+          }
+        }}
+      />
         </div>
     );
 }
