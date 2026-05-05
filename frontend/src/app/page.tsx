@@ -27,9 +27,9 @@ export default function Home() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          language: 'python',
-          code: code
-        }),
+  language: 'c++',
+  code: '#include <iostream>\nusing namespace std;\nint main() { cout << "C++ Engine is LIVE!" << endl; return 0; }'
+}),
       });
 
       // The missing security check!
