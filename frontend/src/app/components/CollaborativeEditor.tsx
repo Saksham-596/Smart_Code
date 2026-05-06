@@ -24,6 +24,7 @@ export default function CollaborativeEditor({
               `ws/${roomName}`,
               ydoc
         );
+        
         // create shared text type
         const ytext = ydoc.getText('monaco');
         // bind the editor to the CRDT state
