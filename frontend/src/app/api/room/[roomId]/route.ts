@@ -7,7 +7,7 @@ export async function POST(
   { params }: { params: any }
 ) {
     try {
-        console.log("--- DEBUG START: POST API HIT ---");
+        //console.log("--- DEBUG START: POST API HIT ---");
 
         // 1. Diagnose Clerk Auth
         let authResult;
@@ -86,7 +86,7 @@ export async function POST(
             }, { status: 500 });
         }
 
-        console.log("--- DEBUG SUCCESS: Saved successfully! ---");
+        //console.log("--- DEBUG SUCCESS: Saved successfully! ---");
         return NextResponse.json({ success: true });
 
     } catch (globalErr: any) {
