@@ -5,7 +5,6 @@ if (!process.env.MONGODB_URI) {
 }
 
 const uri = process.env.MONGODB_URI;
-console.log("MongoDB URI:", uri); // Debugging line to check the URI value
 const options = {};
 
 let client: MongoClient;

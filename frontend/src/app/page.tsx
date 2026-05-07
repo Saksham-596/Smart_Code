@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import type { ComponentType } from 'react';
-import { SignInButton, UserButton, useUser } from "@clerk/nextjs";
+import { useSession, signIn, signOut } from "next-auth/react";
 
 // Define the supported templates
 const TEMPLATES = {
@@ -25,8 +25,9 @@ export default function Home() {
   // Guard against hydration mismatch (Client-only rendering for auth UI)
   const [isMounted, setIsMounted] = useState(false);
 
-  // Clerk Auth State
-  const { isLoaded, isSignedIn, user } = useUser();
+  // NextAuth State
+  const { data: session, status } = useSession();
+  const isSignedIn = status === "authenticated";
   
   // Editor & Execution State
   const [language, setLanguage] = useState<string>("python");
@@ -222,22 +223,18 @@ export default function Home() {
           </button>
 
           {/* Hydration-Safe Authentication UI */}
+          {/* NextAuth UI */}
           <div className="ml-2 border-l border-gray-700 pl-4 flex items-center min-w-[100px] justify-center">
-            {!isMounted ? (
-              // Empty placeholder during server-side render to prevent mismatch freezes
-              <div className="w-8 h-8 rounded-full bg-transparent" />
-            ) : !isLoaded ? (
-              // Loading pulse while Clerk checks authentication cookies
+            {status === "loading" ? (
               <div className="w-8 h-8 rounded-full bg-gray-700 animate-pulse" />
             ) : !isSignedIn ? (
-              // Guest Mode UI
-              <SignInButton mode="modal">
-                <button className="bg-white text-black hover:bg-gray-200 px-4 py-1.5 rounded text-sm font-bold transition-all">
-                  Sign In
-                </button>
-              </SignInButton>
+              <button 
+                onClick={() => signIn('google')}
+                className="bg-white text-black hover:bg-gray-200 px-4 py-1.5 rounded text-sm font-bold transition-all"
+              >
+                Sign In
+              </button>
             ) : (
-              // Logged-In Mode UI
               <div className="flex items-center gap-3">
                  {!activeRoomId && (
                    <button 
@@ -247,7 +244,14 @@ export default function Home() {
                      + Create Room
                    </button>
                  )}
-                 <UserButton />
+                 {/* Simple Profile Pic & Logout */}
+                 <img 
+                    src={session?.user?.image || ""} 
+                    alt="Profile" 
+                    className="w-8 h-8 rounded-full border border-gray-600 cursor-pointer hover:opacity-80"
+                    onClick={() => signOut()}
+                    title="Click to Sign Out"
+                 />
               </div>
             )}
           </div>
