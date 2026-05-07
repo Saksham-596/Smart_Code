@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import type { ComponentType } from 'react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession, signIn, signOut } from "next-auth/react";
 
 // Define the supported templates
@@ -38,9 +40,21 @@ export default function Home() {
   // Room State
   const [joinRoomId, setJoinRoomId] = useState("");
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
+  // Dropdown state
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   
   // Ref for our auto-save timer
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Check the URL for a room ID when the page first loads or refreshes
+  useEffect(() => {
+    const roomFromUrl = searchParams.get('room');
+    if (roomFromUrl) {
+      setActiveRoomId(roomFromUrl);
+    }
+  }, [searchParams]);
 
   // Trigger mount flag
   useEffect(() => {
@@ -59,6 +73,8 @@ export default function Home() {
         setCode(data.code || TEMPLATES[data.language as keyof typeof TEMPLATES] || "");
         setLanguage(data.language || "python");
         setActiveRoomId(joinRoomId);
+        // Tell Next.js to update the URL bar without reloading the page:
+    router.push(`/?room=${joinRoomId}`);
         setOutput(`✅ Successfully joined permanent room: ${joinRoomId}`);
       } else {
         setOutput(`❌ Room ${joinRoomId} not found in database.`);
@@ -74,6 +90,8 @@ export default function Home() {
     // Generate a simple random room ID (e.g., "r-4f8a2")
     const newRoomId = "r-" + Math.random().toString(36).substring(2, 7);
     setActiveRoomId(newRoomId);
+    // Tell Next.js to update the URL bar without reloading the page:
+    router.push(`/?room=${newRoomId}`);
     setOutput(`✅ Created permanent room: ${newRoomId}. Your code will now auto-save.`);
   };
 
@@ -245,13 +263,34 @@ export default function Home() {
                    </button>
                  )}
                  {/* Simple Profile Pic & Logout */}
-                 <img 
-                    src={session?.user?.image || ""} 
-                    alt="Profile" 
-                    className="w-8 h-8 rounded-full border border-gray-600 cursor-pointer hover:opacity-80"
-                    onClick={() => signOut()}
-                    title="Click to Sign Out"
-                 />
+                {/* Upgraded Profile Dropdown */}
+                 <div className="relative">
+                   <img 
+                      src={session?.user?.image || ""} 
+                      alt="Profile" 
+                      className="w-8 h-8 rounded-full border border-gray-600 cursor-pointer hover:ring-2 hover:ring-purple-500 transition-all"
+                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                   />
+                   
+                   {isDropdownOpen && (
+                     <div className="absolute right-0 mt-3 w-40 bg-gray-900 rounded-md shadow-xl py-1 border border-gray-700 z-50">
+                       <Link 
+                         href="/dashboard"
+                         className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
+                         onClick={() => setIsDropdownOpen(false)}
+                       >
+                         Dashboard
+                       </Link>
+                       <hr className="border-gray-700" />
+                       <button
+                         onClick={() => signOut({ callbackUrl: '/' })}
+                         className="block w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-gray-800 hover:text-red-300 transition-colors"
+                       >
+                         Sign Out
+                       </button>
+                     </div>
+                   )}
+                 </div>
               </div>
             )}
           </div>
@@ -263,6 +302,7 @@ export default function Home() {
         <div className="flex-[2] border-r border-gray-700 p-4 relative">
           <div className="h-full w-full rounded-lg bg-[#0d0d0d] overflow-hidden border border-gray-800 absolute inset-4 right-2">
             <Editor
+               key={activeRoomId}
               roomName={activeRoomId || "temporary-guest-room"}
               language={language}
               onCodeChange={(newCode) => setCode(newCode)}
