@@ -9,8 +9,8 @@ import { useSession, signIn, signOut } from "next-auth/react";
 
 // Define the supported templates
 const TEMPLATES = {
-  python: `def main():\n    print("Hello from the Python Queue!")\n\nif __name__ == "__main__":\n    main()`,
-  'c++': `#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << "Hello from the C++ Queue!" << endl;\n    return 0;\n}`
+  python:" ",
+  'c++': " ",
 };
 
 // Force Next.js to only render this component on the client side
@@ -21,6 +21,9 @@ const Editor = dynamic(
   roomName: string;
   language: string;
   onCodeChange?: (newCode: string) => void;
+  userName: string;
+  userImage?: string | null;
+  onUsersChange?: (users: any[]) => void;
 }>;
 
 export default function Home() {
@@ -47,6 +50,9 @@ export default function Home() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [userRooms, setUserRooms] = useState<any[]>([]);
 
+  // Roster State
+  const [activeUsers, setActiveUsers] = useState<any[]>([]);
+
   // Fetch rooms when sidebar opens
   const handleOpenSidebar = async () => {
     setIsSidebarOpen(true);
@@ -63,7 +69,6 @@ export default function Home() {
 
   // Switch rooms instantly
   const handleSwitchRoom = (roomId: string) => {
-    
     setActiveRoomId(roomId);
     router.push(`/?room=${roomId}`);
     setIsSidebarOpen(false); // Close sidebar after clicking
@@ -71,7 +76,7 @@ export default function Home() {
 
   // Create a new room from the sidebar
   const handleCreateNewRoom = () => {
-    // Generate a random room ID (use whatever format you were using before)
+    // Generate a random room ID
     const newRoomId = `r-${Math.random().toString(36).substring(2, 8)}`; 
     
     // Update state and URL
@@ -84,7 +89,7 @@ export default function Home() {
 
   // Delete room instantly
   const handleDeleteRoom = async (e: React.MouseEvent, roomIdToDelete: string) => {
-    e.stopPropagation(); // CRITICAL: Stops the click from opening the room instead
+    e.stopPropagation(); 
 
     if (!window.confirm("Are you sure you want to delete this room?")) return;
 
@@ -94,10 +99,8 @@ export default function Home() {
       });
 
       if (res.ok) {
-        // 1. Remove it from the sidebar visually instantly
         setUserRooms(prev => prev.filter(room => room.roomId !== roomIdToDelete));
 
-        // 2. If they just deleted the room they are currently looking at, kick them out
         if (activeRoomId === roomIdToDelete) {
           setActiveRoomId(null);
           router.push('/');
@@ -138,7 +141,6 @@ export default function Home() {
         setCode(data.code || TEMPLATES[data.language as keyof typeof TEMPLATES] || "");
         setLanguage(data.language || "python");
         setActiveRoomId(joinRoomId);
-        // Tell Next.js to update the URL bar without reloading the page:
         router.push(`/?room=${joinRoomId}`);
         setOutput(`✅ Successfully joined permanent room: ${joinRoomId}`);
       } else {
@@ -152,22 +154,18 @@ export default function Home() {
   // 2. Create Permanent Room Logic
   const handleCreatePermanentRoom = () => {
     if (!isSignedIn) return;
-    // Generate a simple random room ID (e.g., "r-4f8a2")
     const newRoomId = "r-" + Math.random().toString(36).substring(2, 7);
     setActiveRoomId(newRoomId);
-    // Tell Next.js to update the URL bar without reloading the page:
     router.push(`/?room=${newRoomId}`);
     setOutput(`✅ Created permanent room: ${newRoomId}. Your code will now auto-save.`);
   };
 
-  // 3. Auto-Save Logic (Debounced) - Only fires if logged in and inside a real room
+  // 3. Auto-Save Logic
   useEffect(() => {
     if (!isSignedIn || !activeRoomId) return;
 
-    // Clear the previous timer if they keep typing
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
 
-    // Set a new timer to save after 2 seconds of inactivity
     saveTimerRef.current = setTimeout(async () => {
       try {
         const res = await fetch(`/api/room/${activeRoomId}`, {
@@ -186,13 +184,11 @@ export default function Home() {
       }
     }, 2000);
 
-    // Cleanup function
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
   }, [code, language, activeRoomId, isSignedIn]);
 
-  // Handle dropdown language switches
   const handleLanguageChange = (newLang: string) => {
     setLanguage(newLang);
     if (newLang in TEMPLATES) {
@@ -263,8 +259,7 @@ export default function Home() {
             onClick={handleOpenSidebar}
             className="p-2 bg-gray-800 hover:bg-gray-700 text-white rounded-md transition-colors"
           >
-            {/* Simple SVG Hamburger Icon */}
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
@@ -292,7 +287,6 @@ export default function Home() {
         {/* Right Side: Actions & Auth */}
         <div className="flex items-center gap-4">
 
-          {/* Language Selector Dropdown */}
           <select
             value={language}
             onChange={(e) => handleLanguageChange(e.target.value)}
@@ -303,7 +297,6 @@ export default function Home() {
             <option value="c++">C++ (GCC)</option>
           </select>
 
-          {/* Execution Button */}
           <button
             onClick={handleRunCode}
             disabled={isExecuting}
@@ -316,7 +309,6 @@ export default function Home() {
           </button>
 
           {/* Hydration-Safe Authentication UI */}
-          {/* NextAuth UI */}
           <div className="ml-2 border-l border-gray-700 pl-4 flex items-center min-w-[100px] justify-center">
             {status === "loading" ? (
               <div className="w-8 h-8 rounded-full bg-gray-700 animate-pulse" />
@@ -337,7 +329,6 @@ export default function Home() {
                     + Create Room
                   </button>
                 )}
-                {/* Simple Profile Pic & Logout */}
                 {/* Upgraded Profile Dropdown */}
                 <div className="relative">
                   <img
@@ -373,14 +364,44 @@ export default function Home() {
       </nav>
 
       <div className="flex flex-1 overflow-hidden">
+        
         {/* Editor Section */}
-        <div className="flex-[2] border-r border-gray-700 p-4 relative">
-          <div className="h-full w-full rounded-lg bg-[#0d0d0d] overflow-hidden border border-gray-800 absolute inset-4 right-2">
+        <div className="flex-[2] border-r border-gray-700 p-4 flex flex-col gap-3 relative">
+          
+          {/* Live User Roster */}
+          {activeRoomId && (
+            <div className="flex items-center gap-2 bg-gray-800 p-2 rounded-lg border border-gray-700 w-fit">
+              <span className="text-sm text-gray-400 mr-2 border-r border-gray-600 pr-3">
+                {activeUsers.length} Online
+              </span>
+              <div className="flex -space-x-2">
+                {activeUsers.map((user, idx) => (
+                  <div 
+                    key={idx}
+                    className="w-8 h-8 rounded-full border-2 border-gray-900 flex items-center justify-center text-xs font-bold text-white shadow-sm overflow-hidden"
+                    style={{ backgroundColor: user.color || '#9E54FF' }}
+                    title={user.name}
+                  >
+                    {user.image ? (
+                      <img src={user.image} alt={user.name} className="w-full h-full object-cover" />
+                    ) : (
+                      user.name ? user.name.charAt(0).toUpperCase() : '?'
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="w-full flex-1 rounded-lg bg-[#0d0d0d] overflow-hidden border border-gray-800 relative">
             <Editor
               key={activeRoomId}
               roomName={activeRoomId || "temporary-guest-room"}
               language={language}
               onCodeChange={(newCode) => setCode(newCode)}
+              userName={session?.user?.name || 'Anonymous User'}
+              userImage={session?.user?.image || null}
+              onUsersChange={setActiveUsers} // Pass the state updater down!
             />
           </div>
         </div>
@@ -396,6 +417,7 @@ export default function Home() {
             )}
           </div>
         </div>
+
         {/* Sidebar Overlay (Darkens background) */}
         {isSidebarOpen && (
           <div

@@ -6,16 +6,30 @@ import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 import { MonacoBinding } from 'y-monaco';
 
+// Helper to generate vibrant cursor colors
+const cursorColors = ['#FF5F58', '#FFBD2E', '#28C840', '#9E54FF', '#00C2FF', '#FF2E93'];
+function getRandomColor() {
+  return cursorColors[Math.floor(Math.random() * cursorColors.length)];
+}
+
 export default function CollaborativeEditor({
   roomName, 
-  onCodeChange 
+  language,
+  onCodeChange,
+  userName,
+  userImage,
+  onUsersChange 
 }: { 
   roomName: string; 
-  onCodeChange?: (newCode: string) => void 
+  language: string;
+  onCodeChange?: (newCode: string) => void;
+  userName: string;
+  userImage?: string | null;
+  onUsersChange?: (users: any[]) => void; 
 }) {
     const editorRef = useRef<any>(null);
     
-    // We use refs to store the Yjs instances so we can clean them up properly when you leave the room
+    // We use refs to store the Yjs instances so we can clean them up properly
     const ydocRef = useRef<Y.Doc | null>(null);
     const providerRef = useRef<WebsocketProvider | null>(null);
     const bindingRef = useRef<MonacoBinding | null>(null);
@@ -23,8 +37,12 @@ export default function CollaborativeEditor({
     // Handle proper cleanup to prevent phantom WebSockets and memory leaks
     useEffect(() => {
         return () => {
+            // CRITICAL FIX: Erase our avatar from everyone else's screen before leaving!
+            if (providerRef.current) {
+                providerRef.current.awareness.setLocalState(null);
+                providerRef.current.disconnect();
+            }
             if (bindingRef.current) bindingRef.current.destroy();
-            if (providerRef.current) providerRef.current.disconnect();
             if (ydocRef.current) ydocRef.current.destroy();
         };
     }, []);
@@ -43,6 +61,30 @@ export default function CollaborativeEditor({
               ydoc
         );
         providerRef.current = provider;
+        
+        // --- AWARENESS CODE ---
+        // 1. Tell everyone else who we are and what our color is
+        const myColor = getRandomColor();
+        provider.awareness.setLocalStateField('user', {
+            name: userName,
+            color: myColor,
+            image: userImage
+        });
+
+        // 2. Listen for changes in who is connected
+        provider.awareness.on('change', () => {
+            if (onUsersChange) {
+                // Get all active users
+                const states = Array.from(provider.awareness.getStates().values());
+                
+                // Filter out any empty states and map to just the user data
+                const activeUsers = states
+                    .filter(state => state.user)
+                    .map(state => state.user);
+                    
+                onUsersChange(activeUsers);
+            }
+        });
         
         // Create shared text type
         const ytext = ydoc.getText('monaco');
@@ -65,7 +107,6 @@ export default function CollaborativeEditor({
                 const data = await res.json();
                 
                 // ONLY insert if the yjs document is completely empty
-                // (Meaning nobody else is in the room to sync with us via WebRTC)
                 if (data.code && ytext.toString() === '') {
                     ytext.insert(0, data.code);
                 }
@@ -84,7 +125,7 @@ export default function CollaborativeEditor({
         <div className="h-full w-full">
             <Editor
                 height="100%"
-                defaultLanguage="python"
+                defaultLanguage={language}
                 theme="vs-dark"
                 options={{
                   minimap: { enabled: false },
@@ -92,7 +133,6 @@ export default function CollaborativeEditor({
                 }}
                 onMount={handleEditorDidMount}
                 onChange={(value) => {
-                  // Send the updated code back to page.tsx for Auto-Save
                   if (onCodeChange && value !== undefined) {
                      onCodeChange(value);
                   }
