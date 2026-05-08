@@ -14,6 +14,9 @@ const TEMPLATES = {
   'c++': " ",
 };
 
+
+
+
 // Force Next.js to only render this component on the client side
 const Editor = dynamic(
   () => import('./components/CollaborativeEditor') as any,
