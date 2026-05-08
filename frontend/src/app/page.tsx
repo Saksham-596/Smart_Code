@@ -6,6 +6,7 @@ import type { ComponentType } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession, signIn, signOut } from "next-auth/react";
+import { stdin } from 'process';
 
 // Define the supported templates
 const TEMPLATES = {
@@ -37,6 +38,7 @@ export default function Home() {
   // Editor & Execution State
   const [language, setLanguage] = useState<string>("python");
   const [code, setCode] = useState<string>(TEMPLATES["python"]);
+  const [customInput, setCustomInput] = useState("");
   const [output, setOutput] = useState<string>("Waiting for execution engine...");
   const [isExecuting, setIsExecuting] = useState(false);
 
@@ -52,6 +54,7 @@ export default function Home() {
 
   // Roster State
   const [activeUsers, setActiveUsers] = useState<any[]>([]);
+  
 
   // Fetch rooms when sidebar opens
   const handleOpenSidebar = async () => {
@@ -206,7 +209,7 @@ export default function Home() {
       const res = await fetch("http://16.176.136.186/execute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ language, code })
+        body: JSON.stringify({ language, code , stdin: customInput}),
       });
 
       if (!res.ok) throw new Error(`Server returned status ${res.status}`);
@@ -405,10 +408,19 @@ export default function Home() {
             />
           </div>
         </div>
+        <div className="mt-4">
+    <label className="text-xs font-bold text-gray-400 uppercase">Custom Input (stdin)</label>
+    <textarea 
+        className="w-full h-24 p-2 mt-1 bg-gray-900 text-gray-100 rounded-md border border-gray-700 font-mono text-sm focus:outline-none focus:border-blue-500"
+        placeholder="Type custom input here..."
+        value={customInput}
+        onChange={(e) => setCustomInput(e.target.value)}
+    />
+</div>
 
         {/* Terminal Section */}
         <div className="flex-[1] flex flex-col p-4 bg-[#181818] relative">
-          <h2 className="text-sm font-semibold text-gray-400 mb-2">AWS Live Logs</h2>
+          <h2 className="text-sm font-semibold text-gray-400 mb-2">Output</h2>
           <div className="flex-1 rounded bg-black p-4 font-mono text-sm overflow-y-auto whitespace-pre-wrap border border-gray-800">
             {output.includes('❌') ? (
               <span className="text-red-400">{output}</span>
@@ -417,6 +429,8 @@ export default function Home() {
             )}
           </div>
         </div>
+        {/* Standard Input Area */}
+
 
         {/* Sidebar Overlay (Darkens background) */}
         {isSidebarOpen && (
