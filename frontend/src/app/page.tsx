@@ -209,7 +209,7 @@ export default function Home() {
     setOutput("Compiling and running in secure sandbox...");
 
     try {
-      const res = await fetch("http://16.176.136.186/execute", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/execute`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ language, code , stdin: customInput}),
@@ -222,7 +222,7 @@ export default function Home() {
 
       const pollInterval = setInterval(async () => {
         try {
-          const statusRes = await fetch(`http://16.176.136.186/status/${jobId}`);
+          const statusRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/status/${jobId}`);
           const statusData = await statusRes.json();
 
           if (statusData.status === "completed") {

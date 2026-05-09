@@ -54,14 +54,19 @@ export default function CollaborativeEditor({
         const ydoc = new Y.Doc();
         ydocRef.current = ydoc;
 
-        // Connect to FastAPI websocket 
-        const provider = new WebsocketProvider(
-              'ws://localhost:8000',
-              `ws/${roomName}`,
-              ydoc
-        );
-        providerRef.current = provider;
-        
+       // Grab the API URL from your Vercel env variable (fallback to localhost for local dev)
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+// Dynamically convert http:// to ws:// OR https:// to wss://
+const wsUrl = apiUrl.replace(/^http/, "ws");
+
+// Connect to FastAPI secure websocket 
+const provider = new WebsocketProvider(
+      wsUrl,
+      `ws/${roomName}`,
+      ydoc
+);
+providerRef.current = provider;
         // --- AWARENESS CODE ---
         // 1. Tell everyone else who we are and what our color is
         const myColor = getRandomColor();
