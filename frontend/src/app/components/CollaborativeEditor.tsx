@@ -34,39 +34,56 @@ export default function CollaborativeEditor({
     const providerRef = useRef<WebsocketProvider | null>(null);
     const bindingRef = useRef<MonacoBinding | null>(null);
 
-    // Handle proper cleanup to prevent phantom WebSockets and memory leaks
+    // Handle proper cleanup on component unmount
+    // Handle proper cleanup on component unmount AND browser refresh
     useEffect(() => {
-        return () => {
-            // CRITICAL FIX: Erase our avatar from everyone else's screen before leaving!
+        const killConnection = () => {
             if (providerRef.current) {
+                // Erase our avatar and kill the socket before leaving
                 providerRef.current.awareness.setLocalState(null);
                 providerRef.current.disconnect();
             }
+        };
+
+        // This catches browser native Reload and Tab Close events
+        window.addEventListener('beforeunload', killConnection);
+
+        return () => {
+            window.removeEventListener('beforeunload', killConnection);
+            killConnection(); // This catches standard React unmounts
             if (bindingRef.current) bindingRef.current.destroy();
             if (ydocRef.current) ydocRef.current.destroy();
         };
     }, []);
-
     function handleEditorDidMount(editor: any, monaco: any) {
         editorRef.current = editor;
         
+        // --- REACT STRICT MODE GHOST BUSTER ---
+        // If React double-mounts the editor, kill the old connections before making new ones
+        if (providerRef.current) {
+            providerRef.current.disconnect();
+        }
+        if (bindingRef.current) bindingRef.current.destroy();
+        if (ydocRef.current) ydocRef.current.destroy();
+
         // Initialize CRDT state
         const ydoc = new Y.Doc();
         ydocRef.current = ydoc;
 
-       // Grab the API URL from your Vercel env variable (fallback to localhost for local dev)
-const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+        // Grab the API URL from your Vercel env variable (fallback to localhost for local dev)
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-// Dynamically convert http:// to ws:// OR https:// to wss://
-const wsUrl = apiUrl.replace(/^http/, "ws");
+        // Dynamically convert http:// to ws:// OR https:// to wss://
+        const wsUrl = apiUrl.replace(/^http/, "ws");
 
-// Connect to FastAPI secure websocket 
-const provider = new WebsocketProvider(
-      wsUrl,
-      `ws/${roomName}`,
-      ydoc
-);
-providerRef.current = provider;
+        // Connect to FastAPI secure websocket 
+        const provider = new WebsocketProvider(
+            wsUrl,
+            `ws/${roomName}`,
+            ydoc
+        );
+        providerRef.current = provider;
+
         // --- AWARENESS CODE ---
         // 1. Tell everyone else who we are and what our color is
         const myColor = getRandomColor();
@@ -104,6 +121,7 @@ providerRef.current = provider;
         bindingRef.current = binding;
 
         // --- FETCH SAVED CODE FROM MONGODB ---
+        // --- FETCH SAVED CODE FROM MONGODB ---
         const fetchSavedCode = async () => {
             try {
                 const res = await fetch(`/api/room/${roomName}`);
@@ -111,7 +129,6 @@ providerRef.current = provider;
 
                 const data = await res.json();
                 
-                // ONLY insert if the yjs document is completely empty
                 if (data.code && ytext.toString() === '') {
                     ytext.insert(0, data.code);
                 }
@@ -120,10 +137,18 @@ providerRef.current = provider;
             }
         };
 
-        // Wait 500ms to allow WebSocket to sync with any existing users first
+        // Wait 1.5 seconds to let the WebSocket handshake complete
         setTimeout(() => {
-            fetchSavedCode();
-        }, 500);
+            // Count how many clients are actively connected to this room
+            const activeClients = Array.from(provider.awareness.getStates().keys());
+            
+            // CRITICAL: If we are the ONLY person in the room (length <= 1), inject the DB code.
+            // If length > 1, someone else (or a ghost) is already here holding the CRDT state, 
+            // so we do nothing and let Yjs automatically sync the code from them.
+            if (activeClients.length <= 1) {
+                fetchSavedCode();
+            }
+        }, 1500);
     }
 
     return (

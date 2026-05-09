@@ -49,16 +49,18 @@ async def home():
     return {"message": "Smart_Code Custom Relay is Online"}
 
 # 3. The WebSocket Tunnel
-@app.websocket("/ws/{room_name}")
+# The ':path' tells FastAPI to capture everything after /ws/
+@app.websocket("/ws/{room_name:path}")
 async def code_collaboration_ws(websocket: WebSocket, room_name: str):
-    await manager.connect(websocket, room_name)
+    # If the room name accidentally comes in with a trailing slash, strip it
+    clean_room_name = room_name.strip("/")
+    
+    await manager.connect(websocket, clean_room_name)
     try:
         while True:
-            # y-websocket communicates exclusively in binary
             data = await websocket.receive_bytes()
-            await manager.broadcast(data, websocket, room_name)
+            await manager.broadcast(data, websocket, clean_room_name)
     except WebSocketDisconnect:
-        manager.disconnect(websocket, room_name)
+        manager.disconnect(websocket, clean_room_name)
     except Exception:
-        # Catch any unexpected drops safely
-        manager.disconnect(websocket, room_name)
+        manager.disconnect(websocket, clean_room_name)
