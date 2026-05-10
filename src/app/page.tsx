@@ -8,6 +8,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession, signIn, signOut } from "next-auth/react";
 import { stdin } from 'process';
 
+
+
 // Define the supported templates
 const TEMPLATES = {
   python:" ",
