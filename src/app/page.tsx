@@ -352,9 +352,9 @@ export default function Home() {
           </div>
 
           {/* Execution Output */}
-          <div className="flex-[2] rounded-2xl border border-white/5 bg-black flex flex-col shadow-2xl relative overflow-hidden">
+          <div className="flex-[2] min-h-0 rounded-2xl border border-white/5 bg-black flex flex-col shadow-2xl relative overflow-hidden">
             {/* Terminal Top Bar */}
-            <div className="h-10 border-b border-white/10 bg-[#18181b] flex items-center px-4 gap-2">
+            <div className="h-10 shrink-0 border-b border-white/10 bg-[#18181b] flex items-center px-4 gap-2">
               <div className="flex gap-1.5">
                 <div className="w-3 h-3 rounded-full bg-red-500/20 border border-red-500/50" />
                 <div className="w-3 h-3 rounded-full bg-amber-500/20 border border-amber-500/50" />
@@ -363,7 +363,8 @@ export default function Home() {
               <span className="ml-2 text-xs font-bold text-zinc-500 tracking-wider">STDOUT</span>
             </div>
             
-            <div className="flex-1 p-4 font-mono text-[13px] overflow-y-auto whitespace-pre-wrap leading-relaxed">
+            {/* The actual scrolling text area */}
+            <div className="flex-1 min-h-0 p-4 font-mono text-[13px] overflow-y-auto whitespace-pre-wrap leading-relaxed">
               {output.includes('ERROR') || output.includes('❌') ? (
                 <span className="text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.3)]">{output}</span>
               ) : output.includes('SUCCESS') ? (
@@ -373,7 +374,6 @@ export default function Home() {
               )}
             </div>
           </div>
-
         </div>
       </div>
 
