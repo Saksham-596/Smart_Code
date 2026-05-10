@@ -336,15 +336,17 @@ export default function Home() {
         </div>
 
         {/* Right Column: Terminals */}
-        <div className="lg:col-span-3 flex flex-col gap-4 lg:gap-6 h-full">
+        {/* ADDED min-h-0 and overflow-hidden HERE to strictly lock the column height */}
+        <div className="lg:col-span-3 flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden">
           
           {/* Custom Input */}
-          <div className="flex-1 rounded-2xl border border-white/5 bg-[#0e0e11] flex flex-col shadow-xl overflow-hidden focus-within:border-indigo-500/50 transition-colors">
-            <div className="h-10 border-b border-white/5 bg-[#09090b]/50 flex items-center px-4">
+          {/* ADDED min-h-0 here too */}
+          <div className="flex-1 min-h-0 rounded-2xl border border-white/5 bg-[#0e0e11] flex flex-col shadow-xl overflow-hidden focus-within:border-indigo-500/50 transition-colors">
+            <div className="h-10 shrink-0 border-b border-white/5 bg-[#09090b]/50 flex items-center px-4">
               <span className="text-xs font-bold text-zinc-400 tracking-wider">STDIN</span>
             </div>
             <textarea
-              className="flex-1 w-full p-4 bg-transparent text-zinc-300 font-mono text-sm resize-none outline-none placeholder:text-zinc-700"
+              className="flex-1 min-h-0 w-full p-4 bg-transparent text-zinc-300 font-mono text-sm resize-none outline-none placeholder:text-zinc-700"
               placeholder="Inject custom input stream here..."
               value={customInput}
               onChange={(e) => setCustomInput(e.target.value)}
@@ -374,6 +376,7 @@ export default function Home() {
               )}
             </div>
           </div>
+
         </div>
       </div>
 
