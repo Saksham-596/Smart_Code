@@ -40,6 +40,7 @@ export default function Home() {
   // AI State
   const [analysis, setAnalysis] = useState<any>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false); 
+  const [isAnalysisExpanded, setIsAnalysisExpanded] = useState(true);
 
   const [joinRoomId, setJoinRoomId] = useState("");
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
@@ -197,6 +198,7 @@ export default function Home() {
     if (isAnalyzing || !code.trim()) return;
     setIsAnalyzing(true);
     setAnalysis(null);
+    setIsAnalysisExpanded(true); // Auto-open when new scan runs
     
     try {
       const res = await fetch('/api/analyze', {
@@ -266,7 +268,6 @@ export default function Home() {
             <option value="c++">C++ (GCC 11)</option>
           </select>
 
-          {/* FIX: Buttons are now properly separated side-by-side */}
           <div className="flex items-center gap-2">
             <button
               onClick={handleAnalyzeComplexity}
@@ -383,22 +384,43 @@ export default function Home() {
         {/* Right Column: Terminals */}
         <div className="lg:col-span-3 flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden">
           
-          {/* AI Analysis Result Panel */}
+          {/* AI Analysis Result Panel (Collapsible) */}
           {analysis && (
-            <div className="shrink-0 rounded-2xl border border-indigo-500/30 bg-[#0e0e11] p-4 shadow-xl flex flex-col gap-2">
-              <div className="flex gap-4">
-                <div className="bg-indigo-500/10 px-3 py-1.5 rounded-lg border border-indigo-500/20">
-                  <span className="text-xs text-indigo-400 font-bold uppercase tracking-wider">Time</span>
-                  <span className="ml-2 font-mono text-white">{analysis.time_complexity}</span>
+            <div className="shrink-0 rounded-2xl border border-indigo-500/30 bg-[#0e0e11] flex flex-col shadow-xl overflow-hidden transition-all duration-300">
+              {/* Clickable Header */}
+              <button 
+                onClick={() => setIsAnalysisExpanded(!isAnalysisExpanded)}
+                className="w-full flex items-center justify-between p-3 bg-indigo-500/5 hover:bg-indigo-500/10 transition-colors cursor-pointer outline-none"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-extrabold text-indigo-400 uppercase tracking-wider pl-1">AI Analysis</span>
+                  <div className="flex gap-2">
+                    <span className="text-[11px] font-mono bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 px-2 py-0.5 rounded-md">
+                      ⏳ {analysis.time_complexity}
+                    </span>
+                    <span className="text-[11px] font-mono bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 px-2 py-0.5 rounded-md">
+                      💾 {analysis.space_complexity}
+                    </span>
+                  </div>
                 </div>
-                <div className="bg-cyan-500/10 px-3 py-1.5 rounded-lg border border-cyan-500/20">
-                  <span className="text-xs text-cyan-400 font-bold uppercase tracking-wider">Space</span>
-                  <span className="ml-2 font-mono text-white">{analysis.space_complexity}</span>
+                <div className="pr-1 text-zinc-500">
+                  <svg className={`w-4 h-4 transition-transform duration-300 ${isAnalysisExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
                 </div>
-              </div>
-              <p className="text-sm text-zinc-400 mt-1">{analysis.explanation}</p>
-              {analysis.optimization && (
-                <p className="text-xs text-emerald-400 font-medium">💡 {analysis.optimization}</p>
+              </button>
+              
+              {/* Collapsible Body */}
+              {isAnalysisExpanded && (
+                <div className="p-4 pt-2 border-t border-indigo-500/10 bg-[#09090b]/50">
+                  <p className="text-[13px] text-zinc-400 leading-relaxed">{analysis.explanation}</p>
+                  {analysis.optimization && analysis.optimization !== "Optimal" && (
+                    <div className="mt-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-2.5 flex items-start gap-2">
+                      <span className="text-emerald-400 text-sm">💡</span>
+                      <p className="text-[12px] text-emerald-400/90 font-medium leading-relaxed">{analysis.optimization}</p>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           )}
