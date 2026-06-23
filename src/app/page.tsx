@@ -37,6 +37,10 @@ export default function Home() {
   const [output, setOutput] = useState<string>("System initialized. Waiting for execution payload...");
   const [isExecuting, setIsExecuting] = useState(false);
 
+  // AI State
+  const [analysis, setAnalysis] = useState<any>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false); 
+
   const [joinRoomId, setJoinRoomId] = useState("");
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -55,7 +59,6 @@ export default function Home() {
 
   useEffect(() => {
     setIsMounted(true);
-    // Pull saved language from browser memory on load
     const savedLanguage = localStorage.getItem('smartcode_language');
     if (savedLanguage && savedLanguage in TEMPLATES) {
       setLanguage(savedLanguage);
@@ -142,9 +145,7 @@ export default function Home() {
 
   const handleLanguageChange = (newLang: string) => {
     setLanguage(newLang);
-    // Save to browser memory immediately
     localStorage.setItem('smartcode_language', newLang);
-    
     if (newLang in TEMPLATES) {
       setCode(TEMPLATES[newLang as keyof typeof TEMPLATES]);
     }
@@ -189,6 +190,26 @@ export default function Home() {
     } catch (err) {
       setIsExecuting(false);
       setOutput(`> ERROR: Handshake with AWS worker failed.`);
+    }
+  };
+
+  const handleAnalyzeComplexity = async () => {
+    if (isAnalyzing || !code.trim()) return;
+    setIsAnalyzing(true);
+    setAnalysis(null);
+    
+    try {
+      const res = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language, code }),
+      });
+      const data = await res.json();
+      setAnalysis(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
@@ -245,21 +266,32 @@ export default function Home() {
             <option value="c++">C++ (GCC 11)</option>
           </select>
 
-          <button
-            onClick={handleRunCode}
-            disabled={isExecuting}
-            className={`flex items-center gap-2 px-6 py-2 rounded-xl font-semibold transition-all text-sm shadow-lg overflow-hidden relative ${
-              isExecuting
-                ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed border border-white/5'
-                : 'bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white border border-indigo-500/50 hover:shadow-[0_0_20px_rgba(99,102,241,0.4)] hover:-translate-y-0.5'
-            }`}
-          >
-            {isExecuting ? (
-              <><div className="w-4 h-4 border-2 border-zinc-500 border-t-transparent rounded-full animate-spin" /> Executing...</>
-            ) : (
-              <><svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg> Run Code</>
-            )}
-          </button>
+          {/* FIX: Buttons are now properly separated side-by-side */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleAnalyzeComplexity}
+              disabled={isAnalyzing || isExecuting}
+              className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl font-medium transition-all text-sm border border-white/10 disabled:opacity-50"
+            >
+              {isAnalyzing ? "Analyzing..." : "✨ AI Analysis"}
+            </button>
+
+            <button
+              onClick={handleRunCode}
+              disabled={isExecuting}
+              className={`flex items-center gap-2 px-6 py-2 rounded-xl font-semibold transition-all text-sm shadow-lg overflow-hidden relative ${
+                isExecuting
+                  ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed border border-white/5'
+                  : 'bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white border border-indigo-500/50 hover:shadow-[0_0_20px_rgba(99,102,241,0.4)] hover:-translate-y-0.5'
+              }`}
+            >
+              {isExecuting ? (
+                <><div className="w-4 h-4 border-2 border-zinc-500 border-t-transparent rounded-full animate-spin" /> Executing...</>
+              ) : (
+                <><svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg> Run Code</>
+              )}
+            </button>
+          </div>
 
           <div className="pl-4 border-l border-white/10 flex items-center min-w-[100px] justify-end">
             {status === "loading" ? (
@@ -349,11 +381,29 @@ export default function Home() {
         </div>
 
         {/* Right Column: Terminals */}
-        {/* ADDED min-h-0 and overflow-hidden HERE to strictly lock the column height */}
         <div className="lg:col-span-3 flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden">
           
+          {/* AI Analysis Result Panel */}
+          {analysis && (
+            <div className="shrink-0 rounded-2xl border border-indigo-500/30 bg-[#0e0e11] p-4 shadow-xl flex flex-col gap-2">
+              <div className="flex gap-4">
+                <div className="bg-indigo-500/10 px-3 py-1.5 rounded-lg border border-indigo-500/20">
+                  <span className="text-xs text-indigo-400 font-bold uppercase tracking-wider">Time</span>
+                  <span className="ml-2 font-mono text-white">{analysis.time_complexity}</span>
+                </div>
+                <div className="bg-cyan-500/10 px-3 py-1.5 rounded-lg border border-cyan-500/20">
+                  <span className="text-xs text-cyan-400 font-bold uppercase tracking-wider">Space</span>
+                  <span className="ml-2 font-mono text-white">{analysis.space_complexity}</span>
+                </div>
+              </div>
+              <p className="text-sm text-zinc-400 mt-1">{analysis.explanation}</p>
+              {analysis.optimization && (
+                <p className="text-xs text-emerald-400 font-medium">💡 {analysis.optimization}</p>
+              )}
+            </div>
+          )}
+          
           {/* Custom Input */}
-          {/* ADDED min-h-0 here too */}
           <div className="flex-1 min-h-0 rounded-2xl border border-white/5 bg-[#0e0e11] flex flex-col shadow-xl overflow-hidden focus-within:border-indigo-500/50 transition-colors">
             <div className="h-10 shrink-0 border-b border-white/5 bg-[#09090b]/50 flex items-center px-4">
               <span className="text-xs font-bold text-zinc-400 tracking-wider">STDIN</span>
@@ -368,7 +418,6 @@ export default function Home() {
 
           {/* Execution Output */}
           <div className="flex-[2] min-h-0 rounded-2xl border border-white/5 bg-black flex flex-col shadow-2xl relative overflow-hidden">
-            {/* Terminal Top Bar */}
             <div className="h-10 shrink-0 border-b border-white/10 bg-[#18181b] flex items-center px-4 gap-2">
               <div className="flex gap-1.5">
                 <div className="w-3 h-3 rounded-full bg-red-500/20 border border-red-500/50" />
@@ -378,7 +427,6 @@ export default function Home() {
               <span className="ml-2 text-xs font-bold text-zinc-500 tracking-wider">STDOUT</span>
             </div>
             
-            {/* The actual scrolling text area */}
             <div className="flex-1 min-h-0 p-4 font-mono text-[13px] overflow-y-auto whitespace-pre-wrap leading-relaxed">
               {output.includes('ERROR') || output.includes('❌') ? (
                 <span className="text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.3)]">{output}</span>
@@ -448,7 +496,6 @@ export default function Home() {
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                   </button>
-                  {/* Subtle highlight gradient on hover */}
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent to-white/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
                 </div>
               ))
