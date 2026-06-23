@@ -9,8 +9,8 @@ import { useSession, signIn, signOut } from "next-auth/react";
 
 // Define the supported templates
 const TEMPLATES = {
-  python: " ",
-  'c++': " ",
+  python: "print('System Initialized.')\n",
+  'c++': "#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << \"System Initialized.\" << endl;\n    return 0;\n}\n",
 };
 
 // Force Next.js to only render this component on the client side
@@ -53,7 +53,15 @@ export default function Home() {
     if (roomFromUrl) setActiveRoomId(roomFromUrl);
   }, [searchParams]);
 
-  useEffect(() => setIsMounted(true), []);
+  useEffect(() => {
+    setIsMounted(true);
+    // Pull saved language from browser memory on load
+    const savedLanguage = localStorage.getItem('smartcode_language');
+    if (savedLanguage && savedLanguage in TEMPLATES) {
+      setLanguage(savedLanguage);
+      setCode(TEMPLATES[savedLanguage as keyof typeof TEMPLATES]);
+    }
+  }, []);
 
   const handleOpenSidebar = async () => {
     setIsSidebarOpen(true);
@@ -134,7 +142,12 @@ export default function Home() {
 
   const handleLanguageChange = (newLang: string) => {
     setLanguage(newLang);
-    if (newLang in TEMPLATES) setCode(TEMPLATES[newLang as keyof typeof TEMPLATES]);
+    // Save to browser memory immediately
+    localStorage.setItem('smartcode_language', newLang);
+    
+    if (newLang in TEMPLATES) {
+      setCode(TEMPLATES[newLang as keyof typeof TEMPLATES]);
+    }
   };
 
   const handleRunCode = async () => {
